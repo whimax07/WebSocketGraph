@@ -8,12 +8,12 @@ public class Main {
 
     private static void sendA(BrowserConnection browserConnection) {
         System.out.println("Sending A");
-        browserConnection.broadcast("TEXT A");
+        browserConnection.broadcast("{\"title\": \"A\", \"xData\": [1,2], \"yData\": [3,4]}");
     }
 
     private static void sendB(BrowserConnection browserConnection) {
         System.out.println("Sending B");
-        browserConnection.broadcast("TEXT B");
+        browserConnection.broadcast("{\"title\": \"B\", \"xData\": [12.5, 13.0, 13.5], \"yData\": [0.333, 0.666, 0.333]}");
     }
 
 

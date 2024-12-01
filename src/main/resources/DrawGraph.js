@@ -21,6 +21,13 @@ function onmessage(event) {
    console.log("Data received: " + event.data);
    const label = document.getElementById("receivedMessage");
    label.innerText = event.data;
+
+   try {
+       const asJson = JSON.parse(event.data);
+       plot(asJson.title, asJson.xData, asJson.yData);
+   } catch (error) {
+       console.log("Error: ", error.message);
+   }
 }
 
 function onclose(e) {
