@@ -18,26 +18,39 @@ function onopen() {
 }
 
 function onmessage(event) {
-   console.log("Data received: " + event.data);
-   const label = document.getElementById("receivedMessage");
-   label.innerText = event.data;
+    console.log("Data received: " + event.data);
 
-   try {
-       const asJson = JSON.parse(event.data);
-       plot(asJson.title, asJson.xData, asJson.yData);
-   } catch (error) {
-       console.log("Error: ", error.message);
-   }
+    try {
+        const asJson = JSON.parse(event.data);
+        plot(asJson.title, asJson.xData, asJson.yData);
+        document.getElementById("downloadButton").addEventListener(
+            "click",
+            () => addDownloadButton(asJson.title, asJson.xData, asJson.yData, asJson.metaData)
+        );
+    } catch (error) {
+        console.log("Error: ", error.message);
+    }
 }
 
 function onclose(e) {
-   console.log("Connection closed.");
+    console.log("Connection closed.");
+}
+
+function initPlot() {
+    plot("Hello!", ['2020-10-04', '2021-11-04', '2023-12-04'], [90, 40, 60]);
 }
 
 function plot(title, xData, yData) {
+    console.log(`Received plot request. [Title=${title}]`)
+    const numLabels = Math.min(20, xData.length);
+
+    const step = Math.min(1, Math.floor(xData.length / numLabels));
+    const visibleLabels = xData.filter((_, i) => i % step === 0 || i === xData.length - 1);
+
     const trace = {
         x: xData,
         y: yData,
+        mode: 'lines',
         type: 'scatter'
     };
 
@@ -45,30 +58,69 @@ function plot(title, xData, yData) {
         title: {
             text: title
         },
-        showlegend: false
-    };
-
-    Plotly.react('graph', [trace], layout);
-}
-
-function init_plot() {
-    const trace1 = {
-        x: ['2020-10-04', '2021-11-04', '2023-12-04'],
-        y: [90, 40, 60],
-        type: 'scatter'
-    };
-
-    const data = [trace1];
-
-    const layout = {
-        title: {
-            text: 'Scroll and Zoom'
+        xaxis: {
+            tickmode: 'array',
+            tickvals: visibleLabels,
+            ticktext: visibleLabels.map(x => toLabelString(x, 2)),
+            showspikes: true
         },
-        showlegend: false
+        yaxis: {
+            showspikes: true
+        },
+        hovermode: 'closest',
+        autosize: true
     };
 
-    Plotly.react('graph', data, layout);
+    const config = {
+        responsive: true,
+        displayModeBar: true,
+    }
+
+    Plotly.react('graph', [trace], layout, config);
 }
+
+function addDownloadButton(title, xData, yData, metaData) {
+    // Format metadata for the link.
+    let csvContent = `# Title: ${title}\n`;
+
+    // Add the metadata if it exists.
+    if (metaData != null && metaData.length > 0) {
+        const comment = metaData.replace(/\n/g, "\n# ");
+        csvContent += "# " + comment + "\n\n";
+        console.log("Metadata: " + csvContent);
+    }
+
+    // Add the row headings and the data.
+    csvContent += "X-Data,Y-Data\n";
+    for (let i = 0; i < xData.length; i++) {
+        csvContent += `${toLabelString(xData[i], 4)},${yData[i]}\n`
+    }
+
+    // Save the file.
+    const blob = new Blob([csvContent], { type: "text/plain" });
+    const encodedUri = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "GraphData.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function toLabelString(value, numDp) {
+    if (isFloat(value)) {
+        return value.toFixed(numDp).toString();
+    } else {
+        return value.toString();
+    }
+}
+
+function isFloat(value) {
+    return typeof value === "number" && !Number.isInteger(value);
+}
+
+
 
 window.addEventListener("load", connect, false);
-window.addEventListener("load", init_plot, false);
+window.addEventListener("load", initPlot, false);
